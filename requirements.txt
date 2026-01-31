@@ -1,0 +1,9 @@
+streamlit
+pandas
+openpyxl
+requests
+google-genai
+python-dotenv
+pdfplumber
+gspread
+oauth2client

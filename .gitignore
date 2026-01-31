@@ -1,0 +1,22 @@
+# Environment
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# Streamlit
+.streamlit/
+
+# Sensitive files (DO NOT COMMIT)
+*.json
+temp_*.pdf
+temp_*.json
+
+# Sample files (large)
+*.xlsx
+*.pdf
+!sample.xlsx
+
+# Debug tools
+_debug_tools/
+
