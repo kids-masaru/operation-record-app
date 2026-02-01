@@ -11,7 +11,7 @@ st.set_page_config(
     page_title="企業主導型一覧更新",
     page_icon="📄",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # Cute SVG Assets (Inline for simplicity)
