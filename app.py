@@ -10,8 +10,7 @@ st.set_page_config(
 # Custom CSS for beautiful top page
 st.markdown("""
 <style>
-    /* Hide default header/footer */
-    header {visibility: hidden;}
+    /* Keep header visible for sidebar toggle */
     footer {visibility: hidden;}
     
     /* Card styling */

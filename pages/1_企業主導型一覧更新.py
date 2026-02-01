@@ -33,8 +33,7 @@ CLOUD_UPLOAD_ICON = """
 # Custom CSS
 st.markdown("""
 <style>
-    /* Hide Default Headers/Footers */
-    header {visibility: hidden;}
+    /* Hide Default Footer only (keep header for sidebar toggle) */
     footer {visibility: hidden;}
     
     /* General Font */
