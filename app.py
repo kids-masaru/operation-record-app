@@ -1,95 +1,111 @@
 import streamlit as st
-import os
-import pandas as pd
-from io import BytesIO
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+st.set_page_config(
+    page_title="保育園管理ツール",
+    page_icon="🏠",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Import modules
-try:
-    from kintone_client import get_nursery_data, get_bed_data
-    from data_processor import merge_data
-    from excel_manager import update_excel
-except ImportError:
-    st.error("Modules not found. Please ensure project structure.")
-
-st.set_page_config(page_title="運営実績自動更新アプリ", layout="wide")
-
-st.title("📊 運営実績 自動更新ツール")
-
-# Sidebar: Config
-with st.sidebar:
-    st.header("設定")
-    # Load defaults from env
-    default_nursery_token = os.getenv("KINTONE_API_TOKEN_NURSERY", "")
-    default_client_token = os.getenv("KINTONE_API_TOKEN_CLIENT", "")
-    default_gemini_key = os.getenv("GEMINI_API_KEY", "")
-
-    kintone_token = st.text_input("Kintone API Token (保育園: App 218)", value=default_nursery_token, type="password")
-    bed_token = st.text_input("Kintone API Token (クライアント/病床: App 32)", value=default_client_token, type="password")
-    gemini_key = st.text_input("Gemini API Key", value=default_gemini_key, type="password")
+# Custom CSS for beautiful top page
+st.markdown("""
+<style>
+    /* Hide default header/footer */
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
     
-    target_date = st.date_input("更新基準日")
+    /* Card styling */
+    .menu-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        color: white;
+        text-align: center;
+        margin: 1rem 0;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .menu-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    .menu-card-blue {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    }
+    .menu-card-green {
+        background: linear-gradient(135deg, #55efc4 0%, #00b894 100%);
+    }
+    
+    .card-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    .card-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    .card-desc {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    /* Center title */
+    .main-title {
+        text-align: center;
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #2d3436;
+        margin-bottom: 0.5rem;
+    }
+    .main-subtitle {
+        text-align: center;
+        color: #636e72;
+        margin-bottom: 3rem;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# Main: File Upload
-uploaded_file = st.file_uploader("前月の運営実績Excelをアップロード", type=["xlsx"])
+# Main Title
+st.markdown('<div class="main-title">🏠 保育園管理ツール</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-subtitle">左のサイドバーから機能を選んでください</div>', unsafe_allow_html=True)
 
-if st.button("更新開始", type="primary"):
-    if not (uploaded_file and kintone_token and bed_token):
-        st.error("必要な情報（Excel, トークン）が不足しています。")
-        st.stop()
-        
-    # 1. Fetch Data
-    with st.status("データ取得中...", expanded=True) as status:
-        try:
-            st.write("Kintoneから保育園情報を取得中...")
-            nursery_records = get_nursery_data(kintone_token)
-            st.write(f"保育園情報: {len(nursery_records)}件 取得")
-            
-            st.write("Kintoneから病床数データを取得中...")
-            bed_records = get_bed_data(bed_token)
-            st.write(f"病床数データ: {len(bed_records)}件 取得")
-            
-            status.update(label="データ取得完了", state="complete", expanded=False)
-        except Exception as e:
-            st.error(f"エラー発生: {e}")
-            st.stop()
+st.markdown("---")
 
-    # 2. Process Data
-    with st.status("データ処理＆名寄せ中...", expanded=True) as status:
-        try:
-            os.environ["GEMINI_API_KEY"] = gemini_key or ""
-            merged_data = merge_data(nursery_records, bed_records)
-            st.write(f"結合完了: {len(merged_data)}件")
-            status.update(label="処理完了", state="complete", expanded=False)
-        except Exception as e:
-            st.error(f"データ処理エラー: {e}")
-            st.stop()
+# Feature Cards (Display for visual guidance)
+col1, col2 = st.columns(2)
 
-    # 3. Excel Update
-    with st.status("Excel更新中...", expanded=True) as status:
-        try:
-            # Create a copy in memory
-            wb = update_excel(uploaded_file, merged_data, target_date)
-            
-            # Save to BytesIO
-            output = BytesIO()
-            wb.save(output)
-            output.seek(0)
-            
-            status.update(label="Excel生成完了", state="complete", expanded=False)
-            
-            # Download Button
-            st.success("処理が完了しました！")
-            st.download_button(
-                label="更新済みExcelをダウンロード",
-                data=output,
-                file_name=f"運営実績_{target_date}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-            
-        except Exception as e:
-            st.error(f"Excel更新エラー: {e}")
-            st.stop()
+with col1:
+    st.markdown("""
+    <div class="menu-card menu-card-blue">
+        <div class="card-icon">📄</div>
+        <div class="card-title">企業主導型一覧更新</div>
+        <div class="card-desc">PDFから保育施設情報を抽出し、<br>Google Sheetsを自動更新します</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.caption("📍 サイドバー → 「企業主導型一覧更新」")
+
+with col2:
+    st.markdown("""
+    <div class="menu-card menu-card-green">
+        <div class="card-icon">📊</div>
+        <div class="card-title">運営園更新</div>
+        <div class="card-desc">Kintoneからデータを取得し、<br>運営実績Excelを自動更新します</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.caption("📍 サイドバー → 「運営園更新」")
+
+st.markdown("---")
+
+# Instructions
+with st.expander("📖 使い方", expanded=False):
+    st.markdown("""
+    ### 企業主導型一覧更新
+    1. サイドバーから「企業主導型一覧更新」を選択
+    2. 設定ボタン（⚙️）でGoogle認証情報とAPIキーを設定
+    3. PDFをアップロードして更新を実行
+    
+    ### 運営園更新
+    1. サイドバーから「運営園更新」を選択
+    2. KintoneのAPIトークンを入力
+    3. Excelをアップロードして更新を実行
+    """)
