@@ -26,8 +26,11 @@ def fetch_all_records(app_id, api_token, base_query=""):
         params = {
             "app": app_id,
             "query": query,
-            "fields": ["$id", "status", "name", "client_name", "capacity", "open_date", "addr_area", "addr_city",
-                       "保育園", "病床数合計_0"] 
+            "fields": [
+                "$id", "status", "name", "client_name", "capacity", "open_date", 
+                "addr_area", "addr_city", "保育園", "病床数合計_0",
+                "sick_child_care", "sc_flg", "night_care", "ekbn2", "ekbn4"
+            ] 
             # Ideally fetch all fields, but Kintone might error if too many.
             # To be safe, let's NOT specify fields and get all, unless payload is too huge.
             # The error 'offset' implies payload size wasn't the issue, just count.

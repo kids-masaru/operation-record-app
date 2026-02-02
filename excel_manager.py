@@ -207,47 +207,83 @@ CLIENT_VIEW_KEY_COL = 28 # Column AB
 
 def update_excel(template_file, merged_data, config_date):
     """
-    Main function to update the Excel workbook.
+    Update the first sheet of the workbook with a clean summary list.
     """
-    wb = openpyxl.load_workbook(template_file) # data_only=False to keep formulas
+    wb = openpyxl.load_workbook(template_file)
     
-    # Extract lists
-    nursery_list = [m['master'] for m in merged_data]
-    client_list = [m['bed'] for m in merged_data if m['bed']]
-    sheet_names = wb.sheetnames
+    # Target: First Sheet
+    ws = wb.worksheets[0]
+    ws.title = "Kintoneデータ抽出"
     
-    # 1. Update Nursery Info Sheet (Master Data)
-    if NURSERY_SHEET_NAME in sheet_names:
-        ws = wb[NURSERY_SHEET_NAME]
-        update_sheet(ws, nursery_list, NURSERY_MAP, key_field_kintone="name", key_col_idx=NURSERY_KEY_COL, start_row=34)
-    else:
-        found = next((s for s in sheet_names if "保育園" in s), None)
-        if found:
-            update_sheet(wb[found], nursery_list, NURSERY_MAP, key_field_kintone="name", key_col_idx=NURSERY_KEY_COL, start_row=34)
+    # Clear existing data (keep row 1 if valuable? No, user wants specific headers)
+    # Let's overwrite from A1
+    
+    # 1. Define Headers
+    headers = [
+        "No.", "ステータス", "施設名", "クライアント名", "開園日", "定員", 
+        "病児保育", "学童", "夜間保育", 
+        "施設形態", "施設区分", "病床数"
+    ]
+    
+    # Write Headers
+    for col_idx, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.value = header
+        # Optional: Make header bold
+        from openpyxl.styles import Font
+        cell.font = Font(bold=True)
 
-    # 2. Update Client Presentation Sheet (Rows + Date)
-    if CLIENT_SHEET_NAME in sheet_names:
-        ws = wb[CLIENT_SHEET_NAME]
+    # 2. Write Data
+    # merged_data list of dicts: {'master': {...}, 'bed': {...}}
+    
+    row_idx = 2
+    for i, item in enumerate(merged_data, 1):
+        m = item.get('master', {})
+        b = item.get('bed', {}) # Bed data might be array or single? Assuming 1-to-1 match logic from merge_data
         
-        # Update Rows (Insert new nurseries) AND Copy Formulas
-        # Data starts Row 36 (Headers at 35)
-        update_sheet(ws, nursery_list, CLIENT_VIEW_MAP, key_field_kintone="name", key_col_idx=CLIENT_VIEW_KEY_COL, start_row=36)
+        # Helper to safely get value
+        def val(record, field):
+            return record.get(field, {}).get('value', "")
+
+        # Write Row
+        ws.cell(row=row_idx, column=1).value = i
+        ws.cell(row=row_idx, column=2).value = val(m, 'status')
+        ws.cell(row=row_idx, column=3).value = val(m, 'name')
+        ws.cell(row=row_idx, column=4).value = val(m, 'client_name')
+        ws.cell(row=row_idx, column=5).value = val(m, 'open_date')
+        ws.cell(row=row_idx, column=6).value = val(m, 'capacity')
         
-        # Update Date (BK3) manually
-        # Format: 2026年1月 現在
-        date_str = config_date.strftime("%Y年%m月 現在")
-        try:
-            ws["BK3"].value = date_str
-        except:
-            pass
+        # Checkbox/Radio fields often come as list or string. 
+        # Kintone checkbox/multi-select: value is list. Radio/Drop: string.
+        # Assuming string for simple display, or join list.
+        def fmt(v):
+            if isinstance(v, list): return ", ".join(v)
+            return v
             
-    # 3. Update Bed Count Sheet
-    if BED_SHEET_NAME in sheet_names:
-        ws = wb[BED_SHEET_NAME]
-        update_sheet(ws, client_list, BED_MAP, key_field_kintone="保育園", key_col_idx=BED_KEY_COL, start_row=36)
-    else:
-        found = next((s for s in sheet_names if "病床" in s), None)
-        if found:
-            update_sheet(wb[found], client_list, BED_MAP, key_field_kintone="保育園", key_col_idx=BED_KEY_COL, start_row=36)
-            
+        ws.cell(row=row_idx, column=7).value = fmt(val(m, 'sick_child_care'))
+        ws.cell(row=row_idx, column=8).value = fmt(val(m, 'sc_flg'))
+        ws.cell(row=row_idx, column=9).value = fmt(val(m, 'night_care'))
+        ws.cell(row=row_idx, column=10).value = fmt(val(m, 'ekbn2'))
+        ws.cell(row=row_idx, column=11).value = fmt(val(m, 'ekbn4'))
+        
+        # Bed count from bed app
+        # bed_data is likely a list of records if multiple matched? 
+        # Checking merge_data logic (not visible here but assuming structure)
+        # Usually merge_data returns 'bed' as list of records matching the name.
+        # Let's sum bed counts if multiple?
+        bed_count = 0
+        if isinstance(b, list):
+            for brec in b:
+                try:
+                    bed_count += int(brec.get('病床数合計_0', {}).get('value', 0) or 0)
+                except: pass
+        elif isinstance(b, dict):
+             try:
+                bed_count = int(b.get('病床数合計_0', {}).get('value', 0) or 0)
+             except: pass
+             
+        ws.cell(row=row_idx, column=12).value = bed_count
+        
+        row_idx += 1
+
     return wb
