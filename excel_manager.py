@@ -220,7 +220,7 @@ def update_excel(template_file, merged_data, config_date):
     
     # 1. Define Headers
     headers = [
-        "No.", "ステータス", "施設名", "クライアント名", "開園日", "基本開園日", "定員", 
+        "住所", "ステータス", "施設名", "クライアント名", "開園日", "基本開園日", "定員", 
         "病児保育", "学童", "夜間保育", 
         "施設形態", "施設区分", "病床数"
     ]
@@ -246,7 +246,10 @@ def update_excel(template_file, merged_data, config_date):
             return record.get(field, {}).get('value', "")
 
         # Write Row
-        ws.cell(row=row_idx, column=1).value = i
+        # Col 1: Address (addr_area + addr_city)
+        address = f"{val(m, 'addr_area')}{val(m, 'addr_city')}"
+        ws.cell(row=row_idx, column=1).value = address
+        
         ws.cell(row=row_idx, column=2).value = val(m, 'status')
         ws.cell(row=row_idx, column=3).value = val(m, 'name')
         ws.cell(row=row_idx, column=4).value = val(m, 'client_name')
