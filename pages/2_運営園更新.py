@@ -54,12 +54,14 @@ if not KINTONE_TOKEN_NURSERY or not KINTONE_TOKEN_CLIENT:
     st.code("KINTONE_API_TOKEN_NURSERY\nKINTONE_API_TOKEN_CLIENT")
     st.stop()
 
-# Main: File Upload
-uploaded_file = st.file_uploader("前月の運営実績Excelをアップロード", type=["xlsx"])
+# Main: Update Button (No upload needed, uses server-side template)
+st.info("ℹ️ サーバー上のテンプレート(sample.xlsx)を使用してデータを作成します")
 
-if st.button("更新開始", type="primary"):
-    if not uploaded_file:
-        st.error("Excelファイルをアップロードしてください")
+if st.button("更新データを作成する", type="primary"):
+    template_path = "sample.xlsx"
+    
+    if not os.path.exists(template_path):
+        st.error(f"⚠️ テンプレートファイルが見つかりません: {template_path}")
         st.stop()
         
     # 1. Fetch Data
@@ -92,7 +94,8 @@ if st.button("更新開始", type="primary"):
     # 3. Excel Update
     with st.status("Excel更新中...", expanded=True) as status:
         try:
-            wb = update_excel(uploaded_file, merged_data, target_date)
+            # Pass the local filename "sample.xlsx" directly
+            wb = update_excel(template_path, merged_data, target_date)
             
             output = BytesIO()
             wb.save(output)
