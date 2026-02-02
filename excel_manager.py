@@ -220,7 +220,7 @@ def update_excel(template_file, merged_data, config_date):
     
     # 1. Define Headers
     headers = [
-        "No.", "ステータス", "施設名", "クライアント名", "開園日", "定員", 
+        "No.", "ステータス", "施設名", "クライアント名", "開園日", "基本開園日", "定員", 
         "病児保育", "学童", "夜間保育", 
         "施設形態", "施設区分", "病床数"
     ]
@@ -251,20 +251,20 @@ def update_excel(template_file, merged_data, config_date):
         ws.cell(row=row_idx, column=3).value = val(m, 'name')
         ws.cell(row=row_idx, column=4).value = val(m, 'client_name')
         ws.cell(row=row_idx, column=5).value = val(m, 'open_date')
-        ws.cell(row=row_idx, column=6).value = val(m, 'capacity')
         
-        # Checkbox/Radio fields often come as list or string. 
-        # Kintone checkbox/multi-select: value is list. Radio/Drop: string.
-        # Assuming string for simple display, or join list.
+        # Checkbox for Basic Opening Days (likely a list)
         def fmt(v):
             if isinstance(v, list): return ", ".join(v)
             return v
             
-        ws.cell(row=row_idx, column=7).value = fmt(val(m, 'sick_child_care'))
-        ws.cell(row=row_idx, column=8).value = fmt(val(m, 'sc_flg'))
-        ws.cell(row=row_idx, column=9).value = fmt(val(m, 'night_care'))
-        ws.cell(row=row_idx, column=10).value = fmt(val(m, 'ekbn2'))
-        ws.cell(row=row_idx, column=11).value = fmt(val(m, 'ekbn4'))
+        ws.cell(row=row_idx, column=6).value = fmt(val(m, '基本開園日'))
+        ws.cell(row=row_idx, column=7).value = val(m, 'capacity')
+        
+        ws.cell(row=row_idx, column=8).value = fmt(val(m, 'sick_child_care'))
+        ws.cell(row=row_idx, column=9).value = fmt(val(m, 'sc_flg'))
+        ws.cell(row=row_idx, column=10).value = fmt(val(m, 'night_care'))
+        ws.cell(row=row_idx, column=11).value = fmt(val(m, 'ekbn2'))
+        ws.cell(row=row_idx, column=12).value = fmt(val(m, 'ekbn4'))
         
         # Bed count from bed app
         # bed_data is likely a list of records if multiple matched? 
@@ -282,7 +282,7 @@ def update_excel(template_file, merged_data, config_date):
                 bed_count = int(b.get('病床数合計_0', {}).get('value', 0) or 0)
              except: pass
              
-        ws.cell(row=row_idx, column=12).value = bed_count
+        ws.cell(row=row_idx, column=13).value = bed_count
         
         row_idx += 1
 

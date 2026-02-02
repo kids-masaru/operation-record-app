@@ -29,7 +29,8 @@ def fetch_all_records(app_id, api_token, base_query=""):
             "fields": [
                 "$id", "status", "name", "client_name", "capacity", "open_date", 
                 "addr_area", "addr_city", "保育園", "病床数合計_0",
-                "sick_child_care", "sc_flg", "night_care", "ekbn2", "ekbn4"
+                "sick_child_care", "sc_flg", "night_care", "ekbn2", "ekbn4",
+                "基本開園日"
             ] 
             # Ideally fetch all fields, but Kintone might error if too many.
             # To be safe, let's NOT specify fields and get all, unless payload is too huge.
