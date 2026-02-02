@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
-import time
 import traceback
-import base64
 import json
 import os
 
@@ -13,14 +11,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# Cute SVG Assets (Inline for simplicity)
-GEAR_ICON = """
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#888888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="12" cy="12" r="3"></circle>
-  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-</svg>
-"""
 
 CLOUD_UPLOAD_ICON = """
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#74b9ff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
@@ -33,47 +23,17 @@ CLOUD_UPLOAD_ICON = """
 # Custom CSS
 st.markdown("""
 <style>
-    /* Hide Default Footer only (keep header for sidebar toggle) */
     footer {visibility: hidden;}
-    
-    /* General Font */
     body {
         font-family: 'Helvetica Neue', 'Hiragino Kaku Gothic ProN', sans-serif;
         color: #555;
     }
-    
-    /* Center Layout Wrapper */
     .main-container {
         max-width: 800px;
         margin: 0 auto;
-        padding-top: 3rem;
+        padding-top: 2rem;
         text-align: center;
     }
-    
-    /* Config Button Area */
-    .config-area {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 999;
-    }
-    
-    /* Upload Box Styling */
-    .upload-box {
-        border: 2px dashed #dfe6e9;
-        border-radius: 20px;
-        padding: 3rem;
-        text-align: center;
-        background-color: #fcfcfc;
-        transition: all 0.3s;
-        margin: 2rem 0;
-    }
-    .upload-box:hover {
-        border-color: #74b9ff;
-        background-color: #f0f8ff;
-    }
-    
-    /* Custom Title */
     .app-title {
         font-size: 2.5rem;
         font-weight: 800;
@@ -82,10 +42,8 @@ st.markdown("""
     }
     .app-subtitle {
         color: #b2bec3;
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
     }
-    
-    /* Button Styling Override */
     div.stButton > button {
         background-color: #a29bfe !important;
         color: white !important;
@@ -94,14 +52,7 @@ st.markdown("""
         border: none !important;
         font-weight: bold !important;
         box-shadow: 0 4px 15px rgba(162, 155, 254, 0.4) !important;
-        transition: all 0.3s !important;
     }
-    div.stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(162, 155, 254, 0.6) !important;
-    }
-    
-    /* Hide Label of File Uploader */
     div[data-testid="stFileUploader"] label {
         display: none;
     }
@@ -113,38 +64,21 @@ try:
     from sheets_handler import SheetsHandler
     from ai_header_analyzer import get_pdf_headers_and_data, match_headers_with_gemini
 except ImportError:
-    pass
+    st.error("必要なモジュールが見つかりません")
 
-# --- Session State for Settings Toggle ---
-if 'show_settings' not in st.session_state:
-    st.session_state['show_settings'] = False
+# --- Load Environment Variables ---
+GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+SPREADSHEET_URL = os.getenv("SPREADSHEET_URL", "https://docs.google.com/spreadsheets/d/1VykdvyTvtwpiM-7NeheFQBRfwCV58DTxc8hO1peI1C4/edit")
 
-def toggle_settings():
-    st.session_state['show_settings'] = not st.session_state['show_settings']
-
-# --- Layout: Settings Button (Top Right) ---
-col_head_1, col_head_2 = st.columns([9, 1])
-with col_head_2:
-    if st.button("⚙️", key="gear_btn", help="設定を開く"):
-        toggle_settings()
-
-# --- Settings Modal/Section ---
-if st.session_state['show_settings']:
-    with st.container():
-        st.info("🛠️ 設定エリア")
-        with st.expander("認証情報の登録", expanded=True):
-            creds_file = st.file_uploader("credentials.json (Google Service Account key)", type=["json"])
-        
-        default_url = "https://docs.google.com/spreadsheets/d/1VykdvyTvtwpiM-7NeheFQBRfwCV58DTxc8hO1peI1C4/edit"
-        sheet_url = st.text_input("Spreadsheet URL", value=default_url)
-
-        
-        st.markdown("---")
-        st.subheader("🤖 AI設定 (Optional)")
-        gemini_key = st.text_input("Gemini API Key", type="password", help="PDFの列をAIで自動判定する場合に入力")
-        st.caption("※入力がない場合は従来のルールで読み取ります。")
-else:
-    creds_file = None
+# Write credentials to temp file if env var is set
+if GOOGLE_CREDS_JSON:
+    try:
+        creds_data = json.loads(GOOGLE_CREDS_JSON)
+        with open("temp_creds.json", "w") as f:
+            json.dump(creds_data, f)
+    except json.JSONDecodeError:
+        st.error("GOOGLE_CREDENTIALS_JSON の形式が正しくありません")
 
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
 
@@ -153,11 +87,25 @@ st.markdown(f'{CLOUD_UPLOAD_ICON}', unsafe_allow_html=True)
 st.markdown('<div class="app-title">企業主導型一覧更新</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">PDFをアップロードして、リストを自動更新</div>', unsafe_allow_html=True)
 
+# Show env status in sidebar
+with st.sidebar:
+    st.header("📋 メニュー")
+    st.page_link("app.py", label="🏠 ホーム")
+    st.page_link("pages/1_企業主導型一覧更新.py", label="📄 企業主導型一覧更新")
+    st.page_link("pages/2_運営園更新.py", label="📊 運営園更新")
+    st.markdown("---")
+    st.subheader("⚙️ 環境変数ステータス")
+    st.write(f"Google認証: {'✅ 設定済み' if GOOGLE_CREDS_JSON else '❌ 未設定'}")
+    st.write(f"Gemini API: {'✅ 設定済み' if GEMINI_API_KEY else '❌ 未設定'}")
+    st.write(f"Sheet URL: {'✅' if SPREADSHEET_URL else '❌'}")
+    if not GOOGLE_CREDS_JSON:
+        st.caption("💡 Railway Variables で設定してください")
+
 # File Uploader (Center)
 uploaded_pdf = st.file_uploader("PDF Upload", type=["pdf"])
 
 if uploaded_pdf:
-    st.success(f"Filename: {uploaded_pdf.name}")
+    st.success(f"✅ {uploaded_pdf.name}")
     
     # Save PDF
     with open("temp_upload.pdf", "wb") as f:
@@ -167,21 +115,15 @@ if uploaded_pdf:
     if st.button("更新チェックを開始する"):
         
         # Check Creds
-        if not os.path.exists("temp_creds.json") and not creds_file:
-             st.error("⚙️ 右上の設定ボタンから、認証キー(JSON)をセットしてください。")
-             st.session_state['show_settings'] = True
-             st.rerun()
-        
-        if creds_file:
-            with open("temp_creds.json", "wb") as f:
-                f.write(creds_file.getbuffer())
+        if not os.path.exists("temp_creds.json"):
+            st.error("⚠️ 環境変数 GOOGLE_CREDENTIALS_JSON が設定されていません。Railway Variables で設定してください。")
+            st.stop()
         
         # Process and store results in session_state
         try:
             with st.spinner("🚀 データ処理を開始します..."):
                 # 0. Connect to Google Sheets FIRST (to get headers)
-                target_url = sheet_url if 'sheet_url' in locals() else default_url
-                handler = SheetsHandler("temp_creds.json", target_url)
+                handler = SheetsHandler("temp_creds.json", SPREADSHEET_URL)
                 current_df = handler.get_current_data()
                 sheet_headers = current_df.columns.tolist()
 
@@ -190,9 +132,8 @@ if uploaded_pdf:
                 
                 # 2. AI Header Matching (if key provided)
                 header_mapping = {}
-                if 'gemini_key' in locals() and gemini_key:
-                    ai_result = match_headers_with_gemini(pdf_headers, sheet_headers, gemini_key)
-                    
+                if GEMINI_API_KEY:
+                    ai_result = match_headers_with_gemini(pdf_headers, sheet_headers, GEMINI_API_KEY)
                     if "error" not in ai_result:
                         header_mapping = ai_result
                 else:
@@ -201,66 +142,58 @@ if uploaded_pdf:
                         if h in sheet_headers:
                             header_mapping[h] = h
                 
-                # Store in session state for use by the second button
+                # Store in session state
                 st.session_state['pdf_data'] = pdf_data
                 st.session_state['header_mapping'] = header_mapping
                 st.session_state['sheet_headers'] = sheet_headers
                 st.session_state['pdf_headers'] = pdf_headers
-                st.session_state['target_url'] = target_url
                 st.session_state['ready_to_write'] = True
                 
                 st.success("✅ 解析完了！下のボタンで書き込みを実行できます。")
-                st.rerun()  # Rerun to show the second button
+                st.rerun()
                 
         except Exception as e:
             st.error(f"エラー: {e}")
-            import traceback
             st.code(traceback.format_exc())
 
-    # Step 2: Show results and write button (only if data is ready)
+    # Step 2: Show results and write button
     if st.session_state.get('ready_to_write', False):
         pdf_data = st.session_state['pdf_data']
         header_mapping = st.session_state['header_mapping']
         sheet_headers = st.session_state['sheet_headers']
         pdf_headers = st.session_state['pdf_headers']
         
-        # Show summary
-        st.write(f"📋 シート項目: {sheet_headers[:5]}... (全{len(sheet_headers)}個)")
-        st.write(f"📋 PDF項目: {pdf_headers[:5]}... (全{len(pdf_headers)}個)")
-        st.write(f"✅ {len(pdf_data)} 件のデータを抽出しました。")
+        st.write(f"📋 シート項目: {len(sheet_headers)}個")
+        st.write(f"📋 PDF項目: {len(pdf_headers)}個")
+        st.write(f"✅ {len(pdf_data)} 件のデータを抽出")
         
         matched = sum(1 for v in header_mapping.values() if v is not None)
-        st.success(f"AI解析成功! {matched}/{len(pdf_headers)} 項目がマッチしました。")
+        st.success(f"マッチ: {matched}/{len(pdf_headers)} 項目")
         
         with st.expander("マッピング詳細"):
             st.json(header_mapping)
         
         with st.expander("プレビュー（最初の5件）"):
-            import pandas as pd
             preview_df = pd.DataFrame(pdf_data[:5])
             st.dataframe(preview_df)
         
-        st.warning("⚠️ スプレッドシートの既存データを全て消去し、上書きします。")
+        st.warning("⚠️ スプレッドシートを全て上書きします")
         
-        # The actual write button
         if st.button("🚀 全データを書き換える", type="primary"):
             try:
                 with st.spinner("書き込み中..."):
-                    target_url = st.session_state['target_url']
-                    handler = SheetsHandler("temp_creds.json", target_url)
+                    handler = SheetsHandler("temp_creds.json", SPREADSHEET_URL)
                     result_msg = handler.clear_and_write_data(pdf_data, header_mapping)
                 
                 if "Success" in result_msg:
                     st.success(result_msg)
                     st.balloons()
-                    # Clear session state after success
                     st.session_state['ready_to_write'] = False
                 else:
                     st.error(result_msg)
                     
             except Exception as e:
                 st.error(f"書き込みエラー: {e}")
-                import traceback
                 st.code(traceback.format_exc())
 
 st.markdown('</div>', unsafe_allow_html=True)
