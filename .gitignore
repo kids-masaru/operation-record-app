@@ -14,8 +14,10 @@ temp_*.json
 
 # Sample files (large)
 *.xlsx
+*.xlsm
 *.pdf
 !sample.xlsx
+!sample.xlsm
 
 # Debug tools
 _debug_tools/
