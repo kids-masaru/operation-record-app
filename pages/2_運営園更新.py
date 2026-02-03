@@ -78,7 +78,11 @@ st.markdown('<div class="app-title">運営園更新リスト作成</div>', unsaf
 st.markdown('<div class="app-subtitle">Kintoneから最新データを取得し、Excelを作成</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
+import datetime
+
 # Main: Update Button
+target_date = datetime.date.today()
+
 if st.button("更新データを作成する", type="primary"):
     template_path = "sample.xlsx"
     
