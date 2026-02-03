@@ -209,7 +209,7 @@ def update_excel(template_file, merged_data, config_date):
     """
     Update the first sheet of the workbook with a clean summary list.
     """
-    wb = openpyxl.load_workbook(template_file)
+    wb = openpyxl.load_workbook(template_file, keep_vba=True)
     
     # Target: First Sheet
     ws = wb.worksheets[0]

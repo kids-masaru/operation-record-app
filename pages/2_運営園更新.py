@@ -84,11 +84,16 @@ import datetime
 target_date = datetime.date.today()
 
 if st.button("更新データを作成する", type="primary"):
-    template_path = "sample.xlsx"
+    template_path = "sample.xlsm"
     
     if not os.path.exists(template_path):
-        st.error(f"⚠️ テンプレートファイルが見つかりません: {template_path}")
-        st.stop()
+        # Fallback to xlsx if xlsm not found (for smooth transition)
+        if os.path.exists("sample.xlsx"):
+            template_path = "sample.xlsx"
+            st.warning("⚠️ sample.xlsmが見つからないため、sample.xlsxを使用します。")
+        else:
+            st.error(f"⚠️ テンプレートファイルが見つかりません: {template_path}")
+            st.stop()
         
     # 1. Fetch Data
     with st.status("データ取得中...", expanded=True) as status:
@@ -120,7 +125,7 @@ if st.button("更新データを作成する", type="primary"):
     # 3. Excel Update
     with st.status("Excel更新中...", expanded=True) as status:
         try:
-            # Pass the local filename "sample.xlsx" directly
+            # Pass the local filename directly
             wb = update_excel(template_path, merged_data, target_date)
             
             # Write Today's Date to N1
@@ -138,9 +143,15 @@ if st.button("更新データを作成する", type="primary"):
             st.stop()
 
     st.success("処理が完了しました！")
+    
+    # Determine extension based on template (preserve xlsm if source is xlsm)
+    is_xlsm = template_path.lower().endswith(".xlsm")
+    ext = "xlsm" if is_xlsm else "xlsx"
+    mime_type = "application/vnd.ms-excel.sheet.macroEnabled.12" if is_xlsm else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    
     st.download_button(
         label="📥 更新済みExcelをダウンロード",
         data=output,
-        file_name=f"運営実績_{target_date.strftime('%Y%m%d')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        file_name=f"運営実績_{target_date.strftime('%Y%m%d')}.{ext}",
+        mime=mime_type
     )
