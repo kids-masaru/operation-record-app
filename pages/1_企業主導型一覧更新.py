@@ -7,7 +7,7 @@ import os
 # --- Config & Assets ---
 st.set_page_config(
     page_title="企業主導型一覧更新",
-    page_icon="📄",
+    page_icon="icon.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -82,8 +82,9 @@ if GOOGLE_CREDS_JSON:
 
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
 
-# Title & Cloud Icon
-st.markdown(f'{CLOUD_UPLOAD_ICON}', unsafe_allow_html=True)
+# Use the uploaded icon image instead of SVG
+st.image("icon.png", width=120)
+
 st.markdown('<div class="app-title">企業主導型一覧更新</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">PDFをアップロードして、リストを自動更新</div>', unsafe_allow_html=True)
 
@@ -91,7 +92,6 @@ st.markdown('<div class="app-subtitle">PDFをアップロードして、リス�
 # Sidebar: Navigation
 with st.sidebar:
     st.header("📋 メニュー")
-    st.page_link("app.py", label="ホーム")
     st.page_link("pages/1_企業主導型一覧更新.py", label="企業主導型一覧更新")
     st.page_link("pages/2_運営園更新.py", label="運営園更新")
     st.markdown("---")

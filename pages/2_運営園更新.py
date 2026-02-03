@@ -7,9 +7,16 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Sidebar: Navigation
+with st.sidebar:
+    st.header("📋 メニュー")
+    st.page_link("pages/1_企業主導型一覧更新.py", label="企業主導型一覧更新")
+    st.page_link("pages/2_運営園更新.py", label="運営園更新")
+    st.markdown("---")
+
 st.set_page_config(
     page_title="運営園更新",
-    page_icon="📊",
+    page_icon="icon.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -59,14 +66,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-SYNC_ICON = """
-<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#00cec9" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
-</svg>
-"""
-
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
-st.markdown(f'{SYNC_ICON}', unsafe_allow_html=True)
+
+# Use the uploaded icon image instead of SVG
+st.image("icon.png", width=120)
+
 st.markdown('<div class="app-title">運営園更新リスト作成</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">Kintoneから最新データを取得し、Excelを作成</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
