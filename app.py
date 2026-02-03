@@ -67,11 +67,12 @@ st.markdown("""
 # Explicit Sidebar Navigation
 with st.sidebar:
     st.header("📋 メニュー")
-    st.page_link("app.py", label="🏠 ホーム", icon="🏠")
-    st.page_link("pages/1_企業主導型一覧更新.py", label="📄 企業主導型一覧更新", icon="📄")
-    st.page_link("pages/2_運営園更新.py", label="📊 運営園更新", icon="📊")
+    # Using page_link for cleaner navigation
+    # st.page_link("app.py", label="ホーム", icon="🏠") # Valid if we want Home
+    st.page_link("pages/1_企業主導型一覧更新.py", label="企業主導型一覧更新")
+    st.page_link("pages/2_運営園更新.py", label="運営園更新")
     st.markdown("---")
-    st.caption("保育園管理ツール v1.0")
+
 
 # Main Title
 st.markdown('<div class="main-title">🏠 保育園管理ツール</div>', unsafe_allow_html=True)
