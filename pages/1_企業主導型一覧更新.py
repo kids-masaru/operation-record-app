@@ -114,89 +114,63 @@ if uploaded_pdf:
     with open("temp_upload.pdf", "wb") as f:
         f.write(uploaded_pdf.getbuffer())
 
-    # Step 1: 更新チェック Button
-    if st.button("更新チェックを開始する"):
+    # Step 1: 更新チェック & 自動書き換え Button
+    if st.button("更新チェックを開始する（自動書き換え）", type="primary"):
         
         # Check Creds
         if not os.path.exists("temp_creds.json"):
             st.error("⚠️ 環境変数 GOOGLE_CREDENTIALS_JSON が設定されていません。Railway Variables で設定してください。")
             st.stop()
         
-        # Process and store results in session_state
+        # Process and store results
         try:
-            with st.spinner("🚀 データ処理を開始します..."):
+            with st.status("🚀 データ処理を実行中...", expanded=True) as status:
+                st.write("Google Sheetsに接続中...")
                 # 0. Connect to Google Sheets FIRST (to get headers)
                 handler = SheetsHandler("temp_creds.json", SPREADSHEET_URL)
                 current_df = handler.get_current_data()
                 sheet_headers = current_df.columns.tolist()
 
+                st.write("PDFからデータを抽出中...")
                 # 1. Extract PDF headers and data
                 pdf_headers, pdf_data = get_pdf_headers_and_data("temp_upload.pdf")
+                st.write(f"抽出完了: {len(pdf_data)}件のデータ")
                 
                 # 2. AI Header Matching (if key provided)
                 header_mapping = {}
                 if GEMINI_API_KEY:
+                    st.write("AIによるヘッダー解析中...")
                     ai_result = match_headers_with_gemini(pdf_headers, sheet_headers, GEMINI_API_KEY)
                     if "error" not in ai_result:
                         header_mapping = ai_result
                 else:
+                    st.write("項目名マッチング中...")
                     # Fallback: exact name matching
                     for h in pdf_headers:
                         if h in sheet_headers:
                             header_mapping[h] = h
                 
-                # Store in session state
-                st.session_state['pdf_data'] = pdf_data
-                st.session_state['header_mapping'] = header_mapping
-                st.session_state['sheet_headers'] = sheet_headers
-                st.session_state['pdf_headers'] = pdf_headers
-                st.session_state['ready_to_write'] = True
+                matched = sum(1 for v in header_mapping.values() if v is not None)
+                st.write(f"マッピング完了: {matched}/{len(pdf_headers)} 項目マッチ")
                 
-                st.success("✅ 解析完了！下のボタンで書き込みを実行できます。")
-                st.rerun()
+                # 3. Write Data Immediately
+                st.write("Google Sheetsへの書き込みを開始...")
+                result_msg = handler.clear_and_write_data(pdf_data, header_mapping)
+                
+                if "Success" in result_msg:
+                    status.update(label="✅ 全工程完了！", state="complete", expanded=False)
+                    st.success(result_msg)
+                    st.balloons()
+            
+                    with st.expander("詳細レポート"):
+                        st.json(header_mapping)
+                        st.dataframe(pd.DataFrame(pdf_data[:5]))
+                else:
+                    status.update(label="❌ エラー発生", state="error")
+                    st.error(result_msg)
                 
         except Exception as e:
             st.error(f"エラー: {e}")
             st.code(traceback.format_exc())
-
-    # Step 2: Show results and write button
-    if st.session_state.get('ready_to_write', False):
-        pdf_data = st.session_state['pdf_data']
-        header_mapping = st.session_state['header_mapping']
-        sheet_headers = st.session_state['sheet_headers']
-        pdf_headers = st.session_state['pdf_headers']
-        
-        st.write(f"📋 シート項目: {len(sheet_headers)}個")
-        st.write(f"📋 PDF項目: {len(pdf_headers)}個")
-        st.write(f"✅ {len(pdf_data)} 件のデータを抽出")
-        
-        matched = sum(1 for v in header_mapping.values() if v is not None)
-        st.success(f"マッチ: {matched}/{len(pdf_headers)} 項目")
-        
-        with st.expander("マッピング詳細"):
-            st.json(header_mapping)
-        
-        with st.expander("プレビュー（最初の5件）"):
-            preview_df = pd.DataFrame(pdf_data[:5])
-            st.dataframe(preview_df)
-        
-        st.warning("⚠️ スプレッドシートを全て上書きします")
-        
-        if st.button("🚀 全データを書き換える", type="primary"):
-            try:
-                with st.spinner("書き込み中..."):
-                    handler = SheetsHandler("temp_creds.json", SPREADSHEET_URL)
-                    result_msg = handler.clear_and_write_data(pdf_data, header_mapping)
-                
-                if "Success" in result_msg:
-                    st.success(result_msg)
-                    st.balloons()
-                    st.session_state['ready_to_write'] = False
-                else:
-                    st.error(result_msg)
-                    
-            except Exception as e:
-                st.error(f"書き込みエラー: {e}")
-                st.code(traceback.format_exc())
 
 st.markdown('</div>', unsafe_allow_html=True)
