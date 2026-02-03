@@ -88,18 +88,13 @@ st.markdown('<div class="app-title">企業主導型一覧更新</div>', unsafe_a
 st.markdown('<div class="app-subtitle">PDFをアップロードして、リストを自動更新</div>', unsafe_allow_html=True)
 
 # Show env status in sidebar
+# Sidebar: Navigation
 with st.sidebar:
     st.header("📋 メニュー")
-    st.page_link("app.py", label="🏠 ホーム")
-    st.page_link("pages/1_企業主導型一覧更新.py", label="📄 企業主導型一覧更新")
-    st.page_link("pages/2_運営園更新.py", label="📊 運営園更新")
+    st.page_link("app.py", label="ホーム")
+    st.page_link("pages/1_企業主導型一覧更新.py", label="企業主導型一覧更新")
+    st.page_link("pages/2_運営園更新.py", label="運営園更新")
     st.markdown("---")
-    st.subheader("⚙️ 環境変数ステータス")
-    st.write(f"Google認証: {'✅ 設定済み' if GOOGLE_CREDS_JSON else '❌ 未設定'}")
-    st.write(f"Gemini API: {'✅ 設定済み' if GEMINI_API_KEY else '❌ 未設定'}")
-    st.write(f"Sheet URL: {'✅' if SPREADSHEET_URL else '❌'}")
-    if not GOOGLE_CREDS_JSON:
-        st.caption("💡 Railway Variables で設定してください")
 
 # File Uploader (Center)
 uploaded_pdf = st.file_uploader("PDF Upload", type=["pdf"])
