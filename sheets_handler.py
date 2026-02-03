@@ -5,7 +5,7 @@ import pandas as pd
 import os
 
 class SheetsHandler:
-    def __init__(self, credentials_json, sheet_url):
+    def __init__(self, credentials_json, sheet_url, sheet_name=None):
         self.scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
         
         # Determine if credentials_json is a path or content
@@ -18,7 +18,15 @@ class SheetsHandler:
         self.client = gspread.authorize(self.creds)
         self.sheet_url = sheet_url
         self.sh = self.client.open_by_url(sheet_url)
-        self.worksheet = self.sh.get_worksheet(0) # Assume first sheet
+        
+        if sheet_name:
+            try:
+                self.worksheet = self.sh.worksheet(sheet_name)
+            except gspread.WorksheetNotFound:
+                # Optional: create if not found? For now error out or fallback
+                raise ValueError(f"Sheet '{sheet_name}' not found.")
+        else:
+            self.worksheet = self.sh.get_worksheet(0) # Assume first sheet
 
     def get_current_data(self):
         """Fetches all data as a DataFrame."""
@@ -168,6 +176,22 @@ class SheetsHandler:
         except Exception as e:
             print(f"[DEBUG] Write error: {e}")
             return f"Error during write: {e}"
+
+    def write_values(self, data_rows):
+        """
+        Writes a list of lists (raw rows) to the worksheet, clearing it first.
+        Args:
+            data_rows: List[List[Any]]
+        """
+        try:
+            self.worksheet.clear()
+            if not data_rows:
+                return "Warning: No data to write."
+            
+            self.worksheet.update(values=data_rows, range_name="A1")
+            return "Success: Written data to spreadsheet."
+        except Exception as e:
+            return f"Error writing values: {e}"
 
 if __name__ == "__main__":
     # Test only if credentials exist

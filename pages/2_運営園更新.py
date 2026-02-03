@@ -33,6 +33,16 @@ except ImportError:
 KINTONE_TOKEN_NURSERY = os.getenv("KINTONE_API_TOKEN_NURSERY", "")
 KINTONE_TOKEN_CLIENT = os.getenv("KINTONE_API_TOKEN_CLIENT", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
+import json
+# Write credentials to temp file if env var is set
+if GOOGLE_CREDS_JSON:
+    try:
+        creds_data = json.loads(GOOGLE_CREDS_JSON)
+        with open("temp_creds.json", "w") as f:
+            json.dump(creds_data, f)
+    except json.JSONDecodeError:
+        st.error("GOOGLE_CREDENTIALS_JSON の形式が正しくありません")
 
 # Custom CSS
 st.markdown("""
@@ -141,6 +151,59 @@ if st.button("更新データを作成する", type="primary"):
         except Exception as e:
             st.error(f"Excel更新エラー: {e}")
             st.stop()
+            
+    # 4. Google Sheets Sync
+    target_sheet_url = "https://docs.google.com/spreadsheets/d/14ftSq0cV8EEUJ08LDJwqQvZrCOJqZeJwLIStXyzSkaI/edit?gid=1627985378#gid=1627985378"
+    target_sheet_name = "貼り付け用‗運営園"
+    
+    with st.status("Google Sheetsに同期中...", expanded=True) as status:
+        try:
+            # Extract data from the first worksheet of the GENERATED workbook
+            ws = wb.worksheets[0]
+            # Convert worksheet to list of lists (values only)
+            data_to_sync = []
+            for row in ws.iter_rows(values_only=True):
+                # Convert datetime objects to string if needed, or rely on gspread's handling
+                # Gspread usually handles basic types. Dates might need formatting.
+                # Let's simple-cast everything to str to be safe, or let gspread handle it.
+                # Actually, gspread handles strings best.
+                row_data = []
+                for cell in row:
+                    if isinstance(cell, (datetime.date, datetime.datetime)):
+                        row_data.append(cell.strftime("%Y/%m/%d"))
+                    elif cell is None:
+                        row_data.append("")
+                    else:
+                        row_data.append(str(cell))
+                data_to_sync.append(row_data)
+
+            # Check creds again (should exist if we reached here, but safe check)
+            creds_file = "temp_creds.json"
+            if not os.path.exists(creds_file):
+                # Try to generate it from env if missing (though Page 1 or App start should have set it)
+                 if GOOGLE_CREDS_JSON:
+                     try:
+                         with open(creds_file, "w") as f:
+                             json.dump(json.loads(GOOGLE_CREDS_JSON), f)
+                     except: pass
+            
+            if os.path.exists(creds_file):
+                from sheets_handler import SheetsHandler
+                handler = SheetsHandler(creds_file, target_sheet_url, target_sheet_name)
+                sync_result = handler.write_values(data_to_sync)
+                
+                if "Success" in sync_result:
+                    status.update(label="✅ Google Sheets同期完了", state="complete", expanded=False)
+                    st.write("スプレッドシートへの反映に成功しました")
+                else:
+                    status.update(label="⚠️ 同期エラー", state="error", expanded=False)
+                    st.error(f"同期失敗: {sync_result}")
+            else:
+                st.warning("Google認証情報がないため、同期をスキップしました")
+                
+        except Exception as e:
+            st.error(f"同期処理中にエラーが発生しました: {e}")
+            # Don't stop the download, just warn about sync failure
 
     st.success("処理が完了しました！")
     
