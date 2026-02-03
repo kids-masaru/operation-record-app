@@ -97,12 +97,26 @@ if st.button("更新データを作成する", type="primary"):
     template_path = "sample.xlsm"
     
     if not os.path.exists(template_path):
-        # Fallback to xlsx if xlsm not found (for smooth transition)
+        # Fallback to xlsx if xlsm not found
         if os.path.exists("sample.xlsx"):
             template_path = "sample.xlsx"
             st.warning("⚠️ sample.xlsmが見つからないため、sample.xlsxを使用します。")
         else:
             st.error(f"⚠️ テンプレートファイルが見つかりません: {template_path}")
+            
+            # --- DEBUG INFO ---
+            with st.expander("🔍 デバッグ情報（ファイル一覧）", expanded=True):
+                st.write(f"現在地: {os.getcwd()}")
+                files = os.listdir()
+                st.write(f"ファイル数: {len(files)}")
+                st.write(files)
+                
+                # Case sensitivity check
+                match = [f for f in files if f.lower() == "sample.xlsm"]
+                if match:
+                    st.info(f"💡 大文字小文字違いのファイルがあります: {match}")
+            # ------------------
+            
             st.stop()
         
     # 1. Fetch Data
