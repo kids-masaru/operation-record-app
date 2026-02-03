@@ -190,20 +190,41 @@ if st.button("更新データを作成する", type="primary"):
             if os.path.exists(creds_file):
                 from sheets_handler import SheetsHandler
                 handler = SheetsHandler(creds_file, target_sheet_url, target_sheet_name)
-                sync_result = handler.write_values(data_to_sync)
                 
-                if "Success" in sync_result:
-                    status.update(label="✅ Google Sheets同期完了", state="complete", expanded=False)
-                    st.write("スプレッドシートへの反映に成功しました")
+                # Debug Info
+                row_count = len(data_to_sync)
+                # st.write(f"同期対象データ: {row_count} 行") # Inside status
+                
+                if row_count == 0:
+                    status.update(label="⚠️ データが空です", state="error", expanded=True)
+                    sync_status_msg = "⚠️ 同期対象のデータがありませんでした"
+                    sync_success = False
                 else:
-                    status.update(label="⚠️ 同期エラー", state="error", expanded=False)
-                    st.error(f"同期失敗: {sync_result}")
+                    sync_result = handler.write_values(data_to_sync)
+                    
+                    if "Success" in sync_result:
+                        status.update(label="✅ Google Sheets同期完了", state="complete", expanded=False)
+                        sync_status_msg = f"✅ スプレッドシート ({row_count}行) への反映に成功しました"
+                        sync_success = True
+                    else:
+                        status.update(label="⚠️ 同期エラー", state="error", expanded=True)
+                        sync_status_msg = f"❌ 同期失敗: {sync_result}"
+                        sync_success = False
             else:
-                st.warning("Google認証情報がないため、同期をスキップしました")
+                status.update(label="⚠️ 認証エラー", state="error", expanded=True)
+                sync_status_msg = "⚠️ Google認証情報がないため、同期できませんでした"
+                sync_success = False
                 
         except Exception as e:
-            st.error(f"同期処理中にエラーが発生しました: {e}")
-            # Don't stop the download, just warn about sync failure
+            status.update(label="❌ エラー発生", state="error", expanded=True)
+            sync_status_msg = f"❌ 同期処理中にエラーが発生しました: {e}"
+            sync_success = False
+
+    # Show result explicitly outside the collapsed status
+    if sync_success:
+        st.success(sync_status_msg)
+    else:
+        st.error(sync_status_msg)
 
     st.success("処理が完了しました！")
     
