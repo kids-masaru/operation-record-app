@@ -233,6 +233,31 @@ def update_excel(template_file, merged_data, config_date):
         from openpyxl.styles import Font
         cell.font = Font(bold=True)
 
+    # Sort logic: North to South (JIS X 0401)
+    prefectures = [
+        "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県",
+        "茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県",
+        "新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県", "岐阜県",
+        "静岡県", "愛知県", "三重県", "滋賀県", "京都府", "大阪府", "兵庫県",
+        "奈良県", "和歌山県", "鳥取県", "島根県", "岡山県", "広島県", "山口県",
+        "徳島県", "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県",
+        "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"
+    ]
+    
+    # Create a rank map for faster lookup
+    pref_rank = {p: i for i, p in enumerate(prefectures)}
+    
+    def get_rank(item):
+        # Extract addr_area from master record
+        try:
+            val = item.get('master', {}).get('addr_area', {}).get('value', "")
+            return pref_rank.get(val, 999) # 999 for unknown
+        except:
+            return 999
+
+    # Sort merged_data in place
+    merged_data.sort(key=get_rank)
+
     # 2. Write Data
     # merged_data list of dicts: {'master': {...}, 'bed': {...}}
     
