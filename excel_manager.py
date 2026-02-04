@@ -247,16 +247,25 @@ def update_excel(template_file, merged_data, config_date):
     # Create a rank map for faster lookup
     pref_rank = {p: i for i, p in enumerate(prefectures)}
     
-    def get_rank(item):
-        # Extract addr_area from master record
-        try:
-            val = item.get('master', {}).get('addr_area', {}).get('value', "")
-            return pref_rank.get(val, 999) # 999 for unknown
-        except:
-            return 999
+    def get_sort_key(item):
+        # Master record
+        mas = item.get('master', {})
+        
+        # 1. Prefecture Rank
+        # Extract addr_area directly
+        addr = mas.get('addr_area', {}).get('value', "")
+        rank = pref_rank.get(addr, 999)
+        
+        # 2. Municipality (City/Ward)
+        city = mas.get('addr_city', {}).get('value', "") or ""
+        
+        # 3. Client Name
+        client = mas.get('client_name', {}).get('value', "") or ""
+        
+        return (rank, city, client)
 
-    # Sort merged_data in place
-    merged_data.sort(key=get_rank)
+    # Sort merged_data in place with multi-key
+    merged_data.sort(key=get_sort_key)
 
     # 2. Write Data
     # merged_data list of dicts: {'master': {...}, 'bed': {...}}
